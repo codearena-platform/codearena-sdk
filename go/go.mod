@@ -2,7 +2,7 @@ module github.com/codearena-platform/codearena-sdk/go
 
 go 1.25.5
 
-replace github.com/codearena-platform/codearena-core => ../../../../codearena-core
+replace github.com/codearena-platform/codearena-core => ../../codearena-core
 
 require (
 	github.com/codearena-platform/codearena-core v0.0.0-00010101000000-000000000000
