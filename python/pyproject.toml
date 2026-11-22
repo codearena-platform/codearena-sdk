@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77.0.1", "wheel>=0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codearena-sdk"
+version = "0.1.0"
+description = "Python SDK for building CodeArena bots"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "CodeArena Platform" }]
+dependencies = [
+    "grpcio==1.85.3",
+    "protobuf==7.36.2",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "grpcio-tools==1.85.3",
+    "pytest==8.4.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/codearena-platform/codearena-sdk"
+
+[tool.setuptools]
+packages = [
+    "codearena_sdk",
+    "codearena_sdk.generated",
+    "codearena_sdk.generated.v1",
+]
+
+[tool.setuptools.package-data]
+"codearena_sdk.generated.v1" = ["*.proto"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

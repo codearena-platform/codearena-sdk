@@ -1,0 +1,45 @@
+name: Python SDK
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: codearena-sdk
+      - uses: actions/checkout@v4
+        with:
+          repository: codearena-platform/codearena-core
+          path: codearena-core
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: codearena-sdk/python/requirements-dev.txt
+      - name: Install SDK with dev dependencies
+        working-directory: codearena-sdk/python
+        run: python -m pip install -e '.[dev]'
+      - name: Verify generated stubs match the core proto
+        working-directory: codearena-sdk/python
+        run: python scripts/generate_stubs.py --from-core ../../codearena-core/api/proto/v1/bot_api.proto --check
+      - name: Compile sources
+        working-directory: codearena-sdk/python
+        run: python -m compileall -q codearena_sdk
+      - name: Tests
+        working-directory: codearena-sdk/python
+        run: python -m pytest -q
+      - name: Install-and-import smoke test
+        working-directory: codearena-sdk
+        run: |
+          python -m venv "${RUNNER_TEMP}/codearena-sdk-smoke"
+          "${RUNNER_TEMP}/codearena-sdk-smoke/bin/python" -m pip install ./python
+          "${RUNNER_TEMP}/codearena-sdk-smoke/bin/python" -c \
+            "from codearena_sdk import BaseBot, BotRunner; print(BaseBot, BotRunner)"
