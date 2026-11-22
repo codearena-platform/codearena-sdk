@@ -1,0 +1,37 @@
+name: Go SDK
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: codearena-sdk
+      - uses: actions/checkout@v4
+        with:
+          repository: codearena-platform/codearena-core
+          path: codearena-core
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: codearena-sdk/go/go.mod
+          cache-dependency-path: codearena-sdk/go/go.sum
+      - name: Verify formatting
+        working-directory: codearena-sdk/go
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        working-directory: codearena-sdk/go
+        run: go vet ./...
+      - name: Test
+        working-directory: codearena-sdk/go
+        run: go test -race ./...
+      - name: Build
+        working-directory: codearena-sdk/go
+        run: go build ./...
