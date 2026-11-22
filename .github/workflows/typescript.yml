@@ -1,0 +1,47 @@
+name: TypeScript SDK
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: codearena-sdk
+      - uses: actions/checkout@v4
+        with:
+          repository: codearena-platform/codearena-core
+          path: codearena-core
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: codearena-sdk/typescript/package-lock.json
+      - name: Install dependencies
+        working-directory: codearena-sdk/typescript
+        run: npm ci
+      - name: Sync vendored proto from core and verify generated types
+        working-directory: codearena-sdk/typescript
+        run: |
+          cp ../../codearena-core/api/proto/v1/bot_api.proto proto/v1/bot_api.proto
+          npm run generate
+          git diff --exit-code -- proto src/generated
+      - name: Build
+        working-directory: codearena-sdk/typescript
+        run: npm run build
+      - name: Typecheck (including tests)
+        working-directory: codearena-sdk/typescript
+        run: npm run typecheck
+      - name: Tests
+        working-directory: codearena-sdk/typescript
+        run: npm test
+      - name: Verify publishable package contents
+        working-directory: codearena-sdk/typescript
+        run: npm pack --dry-run
