@@ -1,97 +1,80 @@
-import { BotIntent, MatchState, ScannedRobotEvent } from './types';
+import type { BotIntent, MatchState, ScannedRobotEvent } from './types';
+import type { BulletHitTargetEvent__Output } from './generated/codearena/v1/BulletHitTargetEvent';
+import type { HitByBulletEvent__Output } from './generated/codearena/v1/HitByBulletEvent';
+import type { MatchFinishedEvent__Output } from './generated/codearena/v1/MatchFinishedEvent';
+import type { ZoneEnteredEvent__Output } from './generated/codearena/v1/ZoneEnteredEvent';
 
-/**
- * BaseBot is the class that all robot developers should extend.
- * It provides the high-level API to control the robot and handle events.
- */
+/** Base class for CodeArena bots. Intents are collected per tick and reset
+ * after the runner serializes them, so no action leaks into the next tick. */
 export abstract class BaseBot {
-    public id: string = "";
-    public name: string = "";
+  public id = '';
+  public name = '';
 
-    // Internal state tracking
-    protected currentIntent: BotIntent = {
-        moveDistance: 0,
-        turnDegrees: 0,
-        gunTurnDegrees: 0,
-        radarTurnDegrees: 0,
-        firePower: 0,
-        usePower: 0, // PowerType.NONE
+  protected currentIntent: BotIntent = {
+    moveDistance: 0,
+    turnDegrees: 0,
+    gunTurnDegrees: 0,
+    radarTurnDegrees: 0,
+    firePower: 0,
+    usePower: 0,
+  };
+
+  public abstract run(state: MatchState): void;
+
+  public ahead(distance: number): void {
+    this.currentIntent.moveDistance = distance;
+  }
+
+  public back(distance: number): void {
+    this.currentIntent.moveDistance = -distance;
+  }
+
+  public turn(degrees: number): void {
+    this.currentIntent.turnDegrees = degrees;
+  }
+
+  public turnGun(degrees: number): void {
+    this.currentIntent.gunTurnDegrees = degrees;
+  }
+
+  public turnRadar(degrees: number): void {
+    this.currentIntent.radarTurnDegrees = degrees;
+  }
+
+  /** Fire with power 0.1-3.0; non-positive power means no fire. */
+  public fire(power: number): void {
+    this.currentIntent.firePower =
+      power <= 0 ? 0 : Math.min(3, Math.max(0.1, power));
+  }
+
+  public activatePower(power: number): void {
+    if (![0, 1, 2, 3].includes(power)) {
+      throw new RangeError(`unknown power type: ${power}`);
+    }
+    this.currentIntent.usePower = power as 0 | 1 | 2 | 3;
+  }
+
+  /** Legacy hook; the v1 proto has no dedicated scanned-robot event. */
+  public onScannedRobot(_event: ScannedRobotEvent): void {}
+  public onHitByBullet(_event: HitByBulletEvent__Output): void {}
+  public onBulletHitTarget(_event: BulletHitTargetEvent__Output): void {}
+  public onHitWall(): void {}
+  public onHitRobot(_otherId: string): void {}
+  public onZoneEntered(_event: ZoneEnteredEvent__Output): void {}
+  public onDeath(): void {}
+  public onMatchFinished(_event: MatchFinishedEvent__Output): void {}
+
+  /** Internal method used by BotRunner to collect and reset the intent. */
+  public _getIntentAndReset(): BotIntent {
+    const intent: BotIntent = { ...this.currentIntent };
+    this.currentIntent = {
+      moveDistance: 0,
+      turnDegrees: 0,
+      gunTurnDegrees: 0,
+      radarTurnDegrees: 0,
+      firePower: 0,
+      usePower: 0,
     };
-
-    /**
-     * Called every simulation tick.
-     * @param state The current state of the world and the robot.
-     */
-    public abstract run(state: MatchState): void;
-
-    // --- Action Methods ---
-
-    /**
-     * Move the robot forward or backward.
-     * @param distance Distance to move (+ forward, - backward).
-     */
-    public ahead(distance: number): void {
-        this.currentIntent.moveDistance = distance;
-    }
-
-    public back(distance: number): void {
-        this.currentIntent.moveDistance = -distance;
-    }
-
-    /**
-     * Turn the robot body.
-     * @param degrees Rotation in degrees (+ clockwise, - counter-clockwise).
-     */
-    public turn(degrees: number): void {
-        this.currentIntent.turnDegrees = degrees;
-    }
-
-    /**
-     * Turn the gun independently of the body.
-     */
-    public turnGun(degrees: number): void {
-        this.currentIntent.gunTurnDegrees = degrees;
-    }
-
-    /**
-     * Fire a bullet with specific power.
-     * @param power Power from 0.1 to 3.0.
-     */
-    public fire(power: number): void {
-        this.currentIntent.firePower = Math.max(0, Math.min(3, power));
-    }
-
-    /**
-     * Activate a special module (Shield, Overclock, etc.)
-     */
-    public activatePower(power: number): void {
-        this.currentIntent.usePower = power;
-    }
-
-    /**
-     * Turn the radar independently.
-     */
-    public turnRadar(degrees: number): void {
-        this.currentIntent.radarTurnDegrees = degrees;
-    }
-
-    // --- Event Handlers (can be overridden) ---
-
-    public onScannedRobot(event: ScannedRobotEvent): void { }
-    public onHitWall(): void { }
-    public onHitRobot(otherId: string): void { }
-    public onBulletHit(targetId: string): void { }
-    public onHitByBullet(bulletId: string, damage: number): void { }
-    public onDeath(): void { }
-
-    /**
-     * Internal method used by the runner to collect intentions.
-     */
-    public _getIntentAndReset(): BotIntent {
-        const intent = { ...this.currentIntent };
-        // Reset transient intents
-        this.currentIntent.firePower = 0;
-        this.currentIntent.usePower = 0;
-        return intent;
-    }
+    return intent;
+  }
 }
