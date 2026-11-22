@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GOFLAGS: -mod=readonly
+
 jobs:
   go:
     runs-on: ubuntu-latest
